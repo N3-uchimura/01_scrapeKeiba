@@ -3,6 +3,7 @@
 /output/
 /build/
 /csv/
+/db/
 .env
 .manenv
 package-lock.json
