@@ -1,0 +1,36 @@
+{
+  "compilerOptions": {
+    "target": "es2021",
+    /* Modules */
+    "module": "commonjs",
+    "baseUrl": "./",
+    "outDir": "./build",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    /* Type Checking */
+    "strict": true,
+    /* Completeness */
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    //"resolveJsonModule": true,
+    "paths": {
+      "*": [
+        "src/*"
+      ]
+    }
+  },
+  "include": [
+    "./src"
+  ],
+  "exclude": [
+    "./node_modules",
+    "./dist",
+    ".gitignore",
+    ".git",
+    ".env"
+  ],
+  "files": [
+    "./src/getkeiba.ts",
+    "./src/preload.ts"
+  ]
+}

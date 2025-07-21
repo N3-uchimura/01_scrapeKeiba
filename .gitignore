@@ -1,0 +1,9 @@
+/node_modules/
+/dist/
+/output/
+/build/
+/csv/
+.env
+.manenv
+package-lock.json
+appx_setting.json
