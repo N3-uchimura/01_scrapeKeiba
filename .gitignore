@@ -8,3 +8,4 @@
 .manenv
 package-lock.json
 appx_setting.json
+/.vscode
