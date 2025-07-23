@@ -14,7 +14,6 @@ import { myConst, myUrls, mySelectors, myRaces } from './consts/globalvariables'
 import * as path from 'node:path'; // path
 import { existsSync } from 'node:fs'; // file system
 import { writeFile } from 'node:fs/promises'; // filesystem
-import { config as dotenv } from 'dotenv'; // dotenv
 import { BrowserWindow, app, ipcMain, Tray, Menu, nativeImage } from 'electron'; // electron
 import axios from 'axios'; // http communication
 import ELLogger from './class/ElLogger'; // logger
@@ -22,7 +21,6 @@ import SQLite from './class/ElSQLite'; // custom sqlite
 import { Scrape } from './class/ElScrapeCore0719'; // custom Scraper
 import Dialog from './class/ElDialog0721'; // dialog
 import CSV from './class/ElCsv0414'; // aggregator
-import Crypto from './class/Crypto0616'; // custom crypto
 import MKDir from './class/ElMkdir0414'; // mdkir
 /// Variables
 let globalRootPath: string; // root path
@@ -35,8 +33,6 @@ if (!myConst.DEVMODE) {
 } else {
   globalRootPath = path.join(__dirname, '..');
 }
-// dotenv
-dotenv({ path: path.join(__dirname, '../.env') });
 // desktop path
 const dir_home =
   process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'] ?? '';
@@ -47,8 +43,6 @@ const loglevel: string = myConst.LOG_LEVEL ?? 'all';
 const logger: ELLogger = new ELLogger(myConst.COMPANY_NAME, myConst.APP_NAME, loglevel);
 // scraper
 const scraper = new Scrape(logger);
-// crypto
-const cryptoMaker: Crypto = new Crypto(logger, process.env.FIX_SECRET, process.env.PEPPER);
 // mkdir
 const mkdirManager = new MKDir(logger);
 // aggregator
@@ -97,7 +91,7 @@ const createWindow = async (): Promise<void> => {
     mainWindow.once('ready-to-show', async () => {
       // dev mode
       if (!app.isPackaged) {
-        mainWindow.webContents.openDevTools();
+        //mainWindow.webContents.openDevTools();
       }
     });
 
@@ -175,57 +169,14 @@ app.on('ready', async () => {
     await writeFile(fixedDbPath, '');
   }
   // initialize sqlite
-  sqliteMaker = new SQLite(logger, fixedDbPath, 'user', ['id', 'userkey', 'initkey', 'initsalt', 'mail', 'password', 'passiv', 'language', 'token', 'tokensalt', 'authenticated', 'created_at', 'updated_at'], ['INTEGER', 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'TEXT', 'INTEGER', 'TEXT', 'TEXT']);
+  sqliteMaker = new SQLite(logger, fixedDbPath, 'user', ['id', 'language', 'created_at', 'updated_at'], ['INTEGER', 'TEXT', 'TEXT', 'TEXT']);
   // if empty
   if (!sqliteMaker.selectDB()[0]) {
     logger.debug('app: initializing db ...');
     // get now time
     const nowTime: string = getNowTime();
     // insert initial data
-    sqliteMaker.insertDB([1, '', '', '', '', '', '', '', '', '', 0, nowTime, nowTime]);
-  }
-  // authorized flg
-  const tmpAuthorized: number = sqliteMaker.selectDB()[0].authenticated ?? 0;
-
-  // authorized
-  if (tmpAuthorized == 1) {
-    logger.debug('app: inserting first data ...');
-    // initialize key
-    let tmpInitkey: string = '';
-    // initialize key salt
-    let tmpInitsalt: string = '';
-    // initialize key
-    tmpInitkey = sqliteMaker.selectDB()[0].initkey ?? '';
-    // initialize key salt
-    tmpInitsalt = sqliteMaker.selectDB()[0].initsalt ?? '';
-    // initkey not exists
-    if (tmpInitkey == '' || tmpInitsalt == '') {
-      // hash
-      const initkeyObj: any = cryptoMaker.genPassword(process.env.ACCESS_KEY!);
-      // update initkey
-      sqliteMaker.updateDB(['initkey', 'initsalt'], [initkeyObj.hash, initkeyObj.salt], ['id'], [1]);
-      // set key
-      tmpInitkey = initkeyObj.hash;
-      // set salt
-      tmpInitsalt = initkeyObj.salt;
-    }
-    // token key
-    const tmpToken: string = sqliteMaker.selectDB()[0].token ?? '';
-    // token key salt
-    const tmpTokenSalt: string = sqliteMaker.selectDB()[0].tokensalt ?? '';
-    // get authorized
-    const authorized: any = await httpsPost('https://keiba.numthree.net/auth/authorize',
-      {
-        initkey: tmpInitkey,
-        initsalt: tmpInitsalt,
-        token: tmpToken,
-        tokensalt: tmpTokenSalt,
-      });
-    logger.silly(authorized);
-    // update initkey
-    sqliteMaker.updateDB(['userkey'], [authorized], ['id'], [1]);
-  } else {
-    logger.debug('app: not authorized');
+    sqliteMaker.insertDB([1, 'japanese', nowTime, nowTime]);
   }
   // get language
   const language = sqliteMaker.selectDB()[0].language ?? 'japanese';
@@ -323,46 +274,12 @@ ipcMain.on('save', async (_, arg: any) => {
   logger.info('app: save config');
   // language
   const language: string = String(arg.language);
-  // mail
-  const userMail: string = String(arg.mail);
-  // password
-  const userPass: string = String(arg.password);
-  // if not empty
-  if (userMail != '' && userPass != '') {
-    logger.debug('app: input is empty');
-    // encrypt
-    const encrypted: any = cryptoMaker.encrypt(userPass);
-    // update password
-    sqliteMaker.updateDB(['mail', 'password', 'passiv'], [userMail, encrypted.encrypted, encrypted.iv], ['id'], [1]);
-  }
   // update language
   sqliteMaker.updateDB(['language'], [language], ['id'], [1]);
   // goto config page
   await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
   // language
   mainWindow.send('topready', language);
-});
-
-// auth
-ipcMain.on('auth', async (_, arg: any) => {
-  logger.info('app: auth');
-  // token
-  const userToken: string = String(arg);
-  // hash
-  const tokenObj: any = await cryptoMaker.genPassword(userToken);
-  // key
-  const initKey = sqliteMaker.selectDB()[0].initkey;
-  // key
-  const initSalt = sqliteMaker.selectDB()[0].initsalt;
-  // pass encryption
-  const authResult: any = await httpsPost('https://keiba.numthree.net/auth/authkey', {
-    token: tokenObj.hash,
-    tokensalt: tokenObj.salt,
-    initsalt: initSalt,
-    initkey: initKey,
-  });
-  // auth
-  mainWindow.send('authresult', authResult);
 });
 
 // top
@@ -413,7 +330,7 @@ ipcMain.on('sire', async (event: any, arg: any) => {
     // language
     const language = sqliteMaker.selectDB()[0].language;
     // stallion data
-    const stallionData: any = await httpsPost('https://keiba.numthree.net/horse/getstallion', {});
+    const stallionData: any = await httpsPost(`${myConst.DEFAULT_URL}/horse/getstallion`, {});
     // extract first column
     const horses: string[] = stallionData.map((item: any) => item.horsename);
     // extract second column
@@ -423,8 +340,7 @@ ipcMain.on('sire', async (event: any, arg: any) => {
     logger.debug('sire: initialize end');
 
     // loop words
-    //for (let i: number = 0; i < urls.length; i++) {
-    for (let i: number = 0; i < 10; i++) {
+    for (let i: number = 0; i < urls.length; i++) {
       try {
         // empty array
         let tmpObj: any = {
@@ -486,7 +402,6 @@ ipcMain.on('sire', async (event: any, arg: any) => {
             logger.error(err);
           }
         }
-        console.log(tmpObj);
         // add to result array
         resultArray.push(tmpObj);
         // increment success
@@ -522,264 +437,6 @@ ipcMain.on('sire', async (event: any, arg: any) => {
     // end message
     dialogMaker.showmessage('info', endmessage);
     logger.info('sire: getsire completed.');
-
-  } catch (e: unknown) {
-    logger.error(e);
-    // error
-    if (e instanceof Error) {
-      // error message
-      dialogMaker.showmessage('error', e.message);
-    }
-  }
-});
-
-// get horse training
-ipcMain.on('training', async (event: any, arg: any) => {
-  try {
-    logger.info('ipc: gettraining mode');
-    // success Counter
-    let successCounter: number = 0;
-    // fail Counter
-    let failCounter: number = 0;
-    // status message
-    let statusmessage: string;
-    // finish message
-    let endmessage: string;
-    // now date
-    const nowData: string = getNowDate();
-    // get language
-    const language = sqliteMaker.selectDB()[0].language;
-    // race data
-    const raceNoData: any = await httpsPost(`${myConst.DEFAULT_URL}/race/getracingno`, { date: nowData });
-    logger.debug(raceNoData);
-    // empty
-    if (raceNoData.no.length == 0) {
-      // error message
-      let racingErrorMsg: string;
-      // switch language
-      if (language == 'japanese') {
-        // japanese error
-        racingErrorMsg = '開催日ではありません';
-      } else {
-        // english error
-        racingErrorMsg = 'not the racing date';
-      }
-      // error
-      throw new Error(racingErrorMsg);
-    }
-    // header
-    const trainingColumns: string[] = ['race', 'horse', 'date', 'place', 'condition', 'strength', 'review', 'lap1', 'lap2', 'lap3', 'lap4', 'lap5', 'color1', 'color2', 'color3', 'color4', 'color5'];
-    // for race loop
-    const racenums: number[] = [...Array(12)].map((_, i) => i + 1);
-    // formattedDate
-    const formattedDate: string = 'training_' + arg;
-    // file path
-    const tmpFilePath: string = path.join(dir_desktop, formattedDate);
-    // initialize
-    await scraper.init();
-    // goto netkeiba
-    await scraper.doGo(myUrls.BASE_AUTH_URL);
-    logger.debug(`training: goto ${myUrls.BASE_AUTH_URL}`);
-    // wait for id/pass input
-    await scraper.doWaitFor(3000);
-    // tmp netkeiba id
-    const netKeibaId: string = sqliteMaker.selectDB()[0].mail ?? '';
-    // tmp netkeiba password
-    const tmpPass: string = sqliteMaker.selectDB()[0].password ?? '';
-    // tmp netkeiba password iv
-    const tmpPassIv: string = sqliteMaker.selectDB()[0].passiv ?? '';
-    // if empty
-    if (netKeibaId == '' || tmpPass == '' || tmpPassIv || '') {
-      // error
-      throw new Error('no necessary data');
-    }
-    // decrpyt password
-    const netKeibaPass: string = await cryptoMaker.decrypt(tmpPass, tmpPassIv);
-    // input id
-    await scraper.doType("input[name='login_id']", netKeibaId);
-    // input pass
-    await scraper.doType("input[name='pswd']", netKeibaPass);
-    // wait 3 sec
-    await scraper.doWaitFor(3000);
-    // click login button
-    await scraper.doClick('.loginBtn__wrap input');
-    // wait 3 sec
-    await scraper.doWaitFor(3000);
-
-    // loop each races
-    for await (const [idx, _] of Object.entries(raceNoData.no)) {
-      // course name
-      let targetCourseName: string;
-      // finaljson
-      let finalJsonArray: any[] = [];
-      // initialize success counter
-      successCounter = 0;
-      // initialize fail counter
-      failCounter = 0;
-      // index
-      const targetIdx: number = Number(idx);
-      // switch language
-      if (language == 'japanese') {
-        // set japanese racing cource
-        targetCourseName = raceNoData.place[targetIdx];
-      } else {
-        // set english racing cource
-        targetCourseName = myRaces.RACES[raceNoData.place[targetIdx]];
-      }
-      // course name
-      const targetRaceId: string = raceNoData.no[targetIdx];
-      // base url
-      const baseUrl: string = `${myUrls.TRAINING_BASE_URL}?race_id=${targetRaceId}`;
-      // csv filename
-      const filePath: string = `${tmpFilePath}_${targetCourseName}.csv`;
-      // send totalWords
-      event.sender.send('total', {
-        len: 12, // the number of race
-        place: nowData + targetCourseName, // racing course
-      });
-
-      // loop each races
-      for await (let j of racenums) {
-        try {
-          // tmpJsonArray
-          let tmpJsonArray: any[] = [];
-          // url
-          const targetUrl: string = `${baseUrl}${String(j).padStart(2, '0')}${myUrls.DEF_URL_QUERY}`;
-          // goto site
-          await scraper.doGo(targetUrl);
-          logger.debug(`scraping ${targetUrl}`);
-          // wait for datalist
-          await scraper.doWaitFor(3000);
-          // for loop
-          const horsenums: number[] = [...Array(18)].map((_, i) => i + 1);
-          // loop each horses
-          for await (let i of horsenums) {
-            try {
-              // switch on language
-              if (language == 'japanese') {
-                // set finish message
-                statusmessage = `${targetCourseName} 調教取得中...`;
-              } else {
-                // set finish message
-                statusmessage = `Getting ${targetCourseName} Training...`;
-              }
-              // URL
-              event.sender.send('statusUpdate', {
-                status: statusmessage,
-                target: `${String(j)}R`
-              });
-              // empty array
-              let tmpObj: { [key: string]: string } = {
-                race: '', // race
-                horse: '', // horse name
-                date: '', // date
-                place: '', // training center
-                condition: '', // field condition
-                strength: '', // training strength
-                review: '', // review comment
-                lap1: '', // lap time
-                lap2: '', // lap time
-                lap3: '', // lap time
-                lap4: '', // lap time
-                lap5: '', // lap time
-                color1: '', // training color
-                color2: '', // training color
-                color3: '', // training color
-                color4: '', // training color
-                color5: '', // training color
-              };
-              await scraper.doWaitFor(1000);
-              // no element break
-              if (!await scraper.doCheckSelector(`.OikiriDataHead${i} .Horse_Info .Horse_Name a`)) {
-                break;
-              }
-              const postArray: any = await Promise.all([
-                // race no
-                String(j),
-                // horse name
-                scraper.doSingleEval(`.OikiriDataHead${i} .Horse_Info .Horse_Name a`, 'innerHTML'),
-                // date
-                scraper.doSingleEval(`.OikiriDataHead${i} .Training_Day`, 'innerHTML'),
-                // place
-                scraper.doSingleEval(`.OikiriDataHead${i} td:nth-child(6)`, 'innerHTML'),
-                // condition
-                scraper.doSingleEval(`.OikiriDataHead${i} td:nth-child(7)`, 'innerHTML'),
-                // training strength
-                scraper.doSingleEval(`.OikiriDataHead${i} .TrainingLoad`, 'innerHTML'),
-                // training review
-                scraper.doSingleEval(`.OikiriDataHead${i} .Training_Critic`, 'innerHTML'),
-                // rap time
-                scraper.doMultiEval(`.OikiriDataHead${i} .TrainingTimeData .TrainingTimeDataList li .RapTime`, 'innerHTML'),
-                // cell color
-                scraper.doMultiEval(`.OikiriDataHead${i} .TrainingTimeData .TrainingTimeDataList li`, 'className'),
-              ]);
-
-              // not empty
-              if (postArray.length > 0) {
-                // set each value
-                tmpObj.race = postArray[0];
-                tmpObj.horse = postArray[1];
-                tmpObj.date = postArray[2];
-                tmpObj.place = postArray[3];
-                tmpObj.condition = postArray[4];
-                tmpObj.strength = postArray[5];
-                tmpObj.review = postArray[6];
-                tmpObj.lap1 = postArray[7][0];
-                tmpObj.lap2 = postArray[7][1];
-                tmpObj.lap3 = postArray[7][2];
-                tmpObj.lap4 = postArray[7][3];
-                tmpObj.lap5 = postArray[7][4];
-                tmpObj.color1 = postArray[8][0];
-                tmpObj.color2 = postArray[8][1];
-                tmpObj.color3 = postArray[8][2];
-                tmpObj.color4 = postArray[8][3];
-                tmpObj.color5 = postArray[8][4];
-                // set to json
-                tmpJsonArray.push(tmpObj);
-
-              } else {
-                // set empty to json
-                tmpJsonArray.push(tmpObj);
-              }
-
-            } catch (err: unknown) {
-              logger.error(err);
-              break;
-            }
-          }
-          // increment success counter
-          successCounter++;
-          // add resut jsons
-          finalJsonArray.push(tmpJsonArray);
-
-        } catch (error: unknown) {
-          // error
-          logger.error(error);
-          // increment fail counter
-          failCounter++;
-
-        } finally {
-          // send success
-          event.sender.send('success', successCounter);
-          // send fail
-          event.sender.send('fail', failCounter);
-        }
-      }
-      // write data
-      await csvMaker.makeCsvData(finalJsonArray.flat(), trainingColumns, filePath);
-      logger.info(`csv completed.`);
-      await scraper.doWaitFor(1500);
-    }
-    // switch on language
-    if (language == 'japanese') {
-      // set finish message
-      endmessage = myConst.FINISHED_MESSAGE_JA;
-    } else {
-      // set finish message
-      endmessage = myConst.FINISHED_MESSAGE_EN;
-    }
-    // end message
-    dialogMaker.showmessage('info', endmessage);
 
   } catch (e: unknown) {
     logger.error(e);
