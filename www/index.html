@@ -42,7 +42,6 @@
   <script charset="UTF-8">
     /// variables
     let globalfileList = []; // filelist
-    let japaneseFlg = true; // japanese flg
     /// constants
     // japanese
     const APPNAME_STR_JA = '競馬スクレイピングツール';
@@ -142,7 +141,7 @@
     const configPage = () => {
       try {
         // config 
-        window.api.send("config", japaneseFlg);
+        window.api.send("config");
 
       } catch (e) {
         // error
@@ -166,7 +165,6 @@
     const changeLanguage = lang => {
       // japanese
       if (lang == 'japanese') {
-        japaneseFlg = true;
         document.title = APPNAME_STR_JA;
         maintitleDom.innerHTML = APPNAME_STR_JA;
         getcropsDom.innerHTML = GETCROPS_STR_JA;
@@ -178,7 +176,6 @@
         document.documentElement.setAttribute("lang", 'ja');
         // english
       } else {
-        japaneseFlg = false;
         document.title = APPNAME_STR_EN;
         maintitleDom.innerHTML = APPNAME_STR_EN;
         getcropsDom.innerHTML = GETCROPS_STR_EN;

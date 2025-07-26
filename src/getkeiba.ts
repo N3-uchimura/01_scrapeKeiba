@@ -13,19 +13,17 @@ import { myConst, myUrls, mySelectors, myRaces } from './consts/globalvariables'
 /// Modules
 import * as path from 'node:path'; // path
 import { existsSync } from 'node:fs'; // file system
-import { writeFile } from 'node:fs/promises'; // filesystem
+import { readFile, writeFile } from 'node:fs/promises'; // filesystem
 import { BrowserWindow, app, ipcMain, Tray, Menu, nativeImage } from 'electron'; // electron
+import NodeCache from "node-cache"; // for cache
 import axios from 'axios'; // http communication
 import ELLogger from './class/ElLogger'; // logger
-import SQLite from './class/ElSQLite'; // custom sqlite
 import { Scrape } from './class/ElScrapeCore0719'; // custom Scraper
 import Dialog from './class/ElDialog0721'; // dialog
 import CSV from './class/ElCsv0414'; // aggregator
 import MKDir from './class/ElMkdir0414'; // mdkir
 /// Variables
 let globalRootPath: string; // root path
-// db operation
-let sqliteMaker: SQLite;
 // production
 if (!myConst.DEVMODE) {
   globalRootPath = path.resolve();
@@ -47,6 +45,8 @@ const scraper = new Scrape(logger);
 const mkdirManager = new MKDir(logger);
 // aggregator
 const csvMaker = new CSV(myConst.CSV_ENCODING, logger);
+// cache
+const cacheMaker: NodeCache = new NodeCache();
 // dialog
 const dialogMaker: Dialog = new Dialog(logger);
 
@@ -156,30 +156,16 @@ app.on('ready', async () => {
   let displayLabel: string = '';
   // close label
   let closeLabel: string = '';
-  // db dir
-  const dbDirPath: string = path.join(__dirname, '..', 'db');
-  // makedir
-  await mkdirManager.mkDir(dbDirPath);
-  // db file
-  const fixedDbPath: string = path.join(dbDirPath, 'database.db');
+  // txt path
+  const languageTxtPath: string = path.join(__dirname, "..", "assets", "language.txt");
   // not exists
-  if (!existsSync(fixedDbPath)) {
-    logger.debug('app: making db ...');
-    // make empty db file
-    await writeFile(fixedDbPath, '');
-  }
-  // initialize sqlite
-  sqliteMaker = new SQLite(logger, fixedDbPath, 'user', ['id', 'language', 'created_at', 'updated_at'], ['INTEGER', 'TEXT', 'TEXT', 'TEXT']);
-  // if empty
-  if (!sqliteMaker.selectDB()[0]) {
-    logger.debug('app: initializing db ...');
-    // get now time
-    const nowTime: string = getNowTime();
-    // insert initial data
-    sqliteMaker.insertDB([1, 'japanese', nowTime, nowTime]);
+  if (!existsSync(languageTxtPath)) {
+    logger.debug('app: making txt ...');
+    // make txt file
+    await writeFile(languageTxtPath, 'japanese');
   }
   // get language
-  const language = sqliteMaker.selectDB()[0].language ?? 'japanese';
+  const language = await readFile(languageTxtPath, "utf8");
   logger.debug(`language is ${language}`);
   // switch on language
   if (language == 'japanese') {
@@ -193,6 +179,8 @@ app.on('ready', async () => {
     // set close label
     closeLabel = 'close';
   }
+  // cache
+  cacheMaker.set('language', language);
   // app icon
   const icon: Electron.NativeImage = nativeImage.createFromPath(
     path.join(globalRootPath, 'assets/keiba128.ico')
@@ -250,19 +238,19 @@ app.on('window-all-closed', () => {
  IPC
 */
 // ready
-ipcMain.on('beforeready', async (_, __) => {
-  logger.info('app: beforeready app');
+ipcMain.on("beforeready", async (_, __) => {
+  logger.info("app: beforeready app");
   // language
-  const initlanguage = sqliteMaker.selectDB()[0].language ?? 'japanese';
+  const language = cacheMaker.get('language') ?? '';
   // be ready
-  mainWindow.send('ready', initlanguage);
+  mainWindow.send("ready", language);
 });
 
 // config
 ipcMain.on('config', async (_, arg: any) => {
   logger.info('app: config app');
   // language
-  const language = sqliteMaker.selectDB()[0].language ?? 'japanese';
+  const language = cacheMaker.get('language') ?? '';
   // goto config page
   await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'config.html'));
   // language
@@ -274,8 +262,12 @@ ipcMain.on('save', async (_, arg: any) => {
   logger.info('app: save config');
   // language
   const language: string = String(arg.language);
-  // update language
-  sqliteMaker.updateDB(['language'], [language], ['id'], [1]);
+  // txt path
+  const languageTxtPath: string = path.join(globalRootPath, "assets", "language.txt");
+  // make txt file
+  await writeFile(languageTxtPath, language);
+  // cache
+  cacheMaker.set('language', language);
   // goto config page
   await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
   // language
@@ -288,27 +280,27 @@ ipcMain.on('top', async (_, arg: any) => {
   // goto config page
   await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
   // language
-  const language = sqliteMaker.selectDB()[0].language;
+  const language = cacheMaker.get('language') ?? '';
   // language
   mainWindow.send('topready', language);
 });
 
 // exit
-ipcMain.on('exitapp', async (_, __) => {
-  logger.info('app: exit app');
-  // excrpt for apple
-  if (process.platform !== 'darwin') {
-    // exit app
-    app.quit();
-    return false;
-  }
-});
+ipcMain.on('exitapp', async () => {
+  try {
+    logger.info('ipc: exit mode');
+    // selection
+    const selected: number = dialogMaker.showQuetion('question', 'exit', 'exit? data is exposed');
 
-// error
-ipcMain.on('error', async (_, arg: any) => {
-  logger.info('ipc: error mode');
-  // show error
-  dialogMaker.showmessage('error', `${arg})`);
+    // when yes
+    if (selected == 0) {
+      // close
+      app.quit();
+    }
+
+  } catch (e: unknown) {
+    logger.error(e);
+  }
 });
 
 // get horse sire
@@ -328,7 +320,7 @@ ipcMain.on('sire', async (event: any, arg: any) => {
     // selector array
     const selectorArray: string[] = [mySelectors.TURF_SELECTOR, mySelectors.TURF_WIN_SELECTOR, mySelectors.DIRT_SELECTOR, mySelectors.DIRT_WIN_SELECTOR, mySelectors.TURF_DIST_SELECTOR, mySelectors.DIRT_DIST_SELECTOR];
     // language
-    const language = sqliteMaker.selectDB()[0].language;
+    const language = cacheMaker.get('language') ?? '';
     // stallion data
     const stallionData: any = await httpsPost(`${myConst.DEFAULT_URL}/horse/getstallion`, {});
     // extract first column
@@ -490,20 +482,16 @@ const httpsPost = async (
   });
 };
 
-// get now time
-const getNowTime = (): string => {
-  // get now time
-  return new Date().toLocaleString('ja-JP', {
-    timeZone: 'Asia/Tokyo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  }).replaceAll('/', '-');
-}
+// error
+ipcMain.on('error', async (_, arg: any) => {
+  logger.info('ipc: error mode');
+  // show error
+  dialogMaker.showmessage('error', `${arg})`);
+});
 
+/*
+ Functions
+*/
 // get now date
 const getNowDate = (): string => {
   // get now time
