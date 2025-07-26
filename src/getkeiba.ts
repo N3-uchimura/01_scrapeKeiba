@@ -21,7 +21,6 @@ import ELLogger from './class/ElLogger'; // logger
 import { Scrape } from './class/ElScrapeCore0719'; // custom Scraper
 import Dialog from './class/ElDialog0721'; // dialog
 import CSV from './class/ElCsv0414'; // aggregator
-import MKDir from './class/ElMkdir0414'; // mdkir
 /// Variables
 let globalRootPath: string; // root path
 // production
@@ -41,8 +40,6 @@ const loglevel: string = myConst.LOG_LEVEL ?? 'all';
 const logger: ELLogger = new ELLogger(myConst.COMPANY_NAME, myConst.APP_NAME, loglevel);
 // scraper
 const scraper = new Scrape(logger);
-// mkdir
-const mkdirManager = new MKDir(logger);
 // aggregator
 const csvMaker = new CSV(myConst.CSV_ENCODING, logger);
 // cache
