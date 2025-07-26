@@ -6,8 +6,7 @@
   "main": "build/getkeiba.js",
   "scripts": {
     "build": "tsc && chcp 65001",
-    "start": "npm run build && electron .",
-    "build-win": "npm run build && electron-builder --win --x64"
+    "start": "npm run build && electron ."
   },
   "keywords": [],
   "author": {
