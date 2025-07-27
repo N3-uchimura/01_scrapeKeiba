@@ -1,6 +1,7 @@
 ## name
-scrapeKeiba    
-![logo image](https://github.com/user-attachments/assets/bca4a57e-745e-4810-89dc-dffbf977e253)
+scrapeKeiba
+
+<img width="64" height="64" alt="keiba128" src="https://github.com/user-attachments/assets/f187de25-3425-4ced-95e6-29a37489ec33" />
 
 ## Overview
 This is scraping tool for netkeiba.com.  
