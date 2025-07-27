@@ -11,8 +11,8 @@ As a first release, collecting crop's results of stallion horse.
 Windows10 ~  
 
 ## Usage
-1. download zip or pull repository.
-2. execute below.
+1. Download zip or pull repository.
+2. Execute below on cmd.
    ```
    npm install
    npm start
