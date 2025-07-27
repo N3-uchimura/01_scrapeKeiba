@@ -8,7 +8,7 @@ This is scraping tool for netkeiba.com.
 As a first release, collecting crop's results of stallion horse.
 
 ## Requirement
-Windos10 ~  
+Windows10 ~  
 
 ## Usage
 1. download zip or pull repository.
