@@ -5,7 +5,7 @@ scrapeKeiba
 
 ## Overview
 This is scraping tool for netkeiba.com.  
-As a first release, collecting crops results of stallion horse.
+As a first release, collecting crop's results of stallion horse.
 
 ## Requirement
 Windos10 ~  
