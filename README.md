@@ -27,5 +27,4 @@ Windows10 ~
 N3-Uchimura
 
 ## Licence
-
 [MIT](https://mit-license.org/)
