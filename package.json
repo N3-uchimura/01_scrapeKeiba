@@ -1,6 +1,6 @@
 {
-  "name": "net.numthree.scrapekeiba",
-  "productName": "scrapekeiba",
+  "name": "scrape-keiba",
+  "productName": "scrape-keiba",
   "version": "1.0.2-alpha.1",
   "description": "application for getting keiba data.",
   "main": "build/getkeiba.js",
