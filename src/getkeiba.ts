@@ -25,7 +25,7 @@ import CSV from './class/ElCsv0414'; // aggregator
 let globalRootPath: string; // root path
 // production
 if (!myConst.DEVMODE) {
-  globalRootPath = path.resolve();
+  globalRootPath = path.join(path.resolve(), 'resources')
   // development
 } else {
   globalRootPath = path.join(__dirname, '..');
@@ -230,7 +230,6 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 
-
 /*
  IPC
 */
@@ -241,63 +240,6 @@ ipcMain.on("beforeready", async (_, __) => {
   const language = cacheMaker.get('language') ?? '';
   // be ready
   mainWindow.send("ready", language);
-});
-
-// config
-ipcMain.on('config', async (_, arg: any) => {
-  logger.info('app: config app');
-  // language
-  const language = cacheMaker.get('language') ?? '';
-  // goto config page
-  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'config.html'));
-  // language
-  mainWindow.send('confready', language);
-});
-
-// save
-ipcMain.on('save', async (_, arg: any) => {
-  logger.info('app: save config');
-  // language
-  const language: string = String(arg.language);
-  // txt path
-  const languageTxtPath: string = path.join(globalRootPath, "assets", "language.txt");
-  // make txt file
-  await writeFile(languageTxtPath, language);
-  // cache
-  cacheMaker.set('language', language);
-  // goto config page
-  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
-  // language
-  mainWindow.send('topready', language);
-});
-
-// top
-ipcMain.on('top', async (_, arg: any) => {
-  logger.info('app: top');
-  // goto config page
-  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
-  // language
-  const language = cacheMaker.get('language') ?? '';
-  // language
-  mainWindow.send('topready', language);
-});
-
-// exit
-ipcMain.on('exitapp', async () => {
-  try {
-    logger.info('ipc: exit mode');
-    // selection
-    const selected: number = dialogMaker.showQuetion('question', 'exit', 'exit? data is exposed');
-
-    // when yes
-    if (selected == 0) {
-      // close
-      app.quit();
-    }
-
-  } catch (e: unknown) {
-    logger.error(e);
-  }
 });
 
 // get horse sire
@@ -434,6 +376,63 @@ ipcMain.on('sire', async (event: any, arg: any) => {
       // error message
       dialogMaker.showmessage('error', e.message);
     }
+  }
+});
+
+// config
+ipcMain.on('config', async (_, arg: any) => {
+  logger.info('app: config app');
+  // language
+  const language = cacheMaker.get('language') ?? '';
+  // goto config page
+  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'config.html'));
+  // language
+  mainWindow.send('confready', language);
+});
+
+// save
+ipcMain.on('save', async (_, arg: any) => {
+  logger.info('app: save config');
+  // language
+  const language: string = String(arg.language);
+  // txt path
+  const languageTxtPath: string = path.join(globalRootPath, "assets", "language.txt");
+  // make txt file
+  await writeFile(languageTxtPath, language);
+  // cache
+  cacheMaker.set('language', language);
+  // goto config page
+  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
+  // language
+  mainWindow.send('topready', language);
+});
+
+// top
+ipcMain.on('top', async (_, arg: any) => {
+  logger.info('app: top');
+  // goto config page
+  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
+  // language
+  const language = cacheMaker.get('language') ?? '';
+  // language
+  mainWindow.send('topready', language);
+});
+
+// exit
+ipcMain.on('exitapp', async () => {
+  try {
+    logger.info('ipc: exit mode');
+    // selection
+    const selected: number = dialogMaker.showQuetion('question', 'exit', 'exit? data is exposed');
+
+    // when yes
+    if (selected == 0) {
+      // close
+      app.quit();
+    }
+
+  } catch (e: unknown) {
+    logger.error(e);
   }
 });
 
