@@ -1,30 +1,54 @@
+<table>
+	<thead>
+    	<tr>
+      		<th style="text-align:center">English</th>
+      		<th style="text-align:center"><a href="README-ja.md">日本語</a></th>
+    	</tr>
+  	</thead>
+</table>
+
 ## name
+
 scrapeKeiba
 
-<img width="64" height="64" alt="keiba128" src="https://github.com/user-attachments/assets/f187de25-3425-4ced-95e6-29a37489ec33" />
-
 ## Overview
+
 This is scraping tool for netkeiba.com.  
 As a first release, collecting crop's results of stallion horse.
 
 ## Requirement
-Windows10 ~  
 
-## Usage
+Windows10 ~
+
+## Setting
+
+### From souce
+
 1. Download zip or pull repository.
 2. Execute below on cmd.
    ```
    npm install
    npm start
    ```
-3. Press "Get Crops Results" button.
-4. All finished, csv file will be on desktop.
+
+### From exe
+
+1. Download exe file from release.
+2. DoubleClick on exe file and install.
+
+## Usage
+
+1. Press "Get Crops Results" button.
+2. All finished, csv file will be on desktop.
 
 ## Features
-+ You can change default language to English by pressing "Config" button and checkout "japanese".
-  
+
+- You can change default language to English by pressing "Config" button and checkout "japanese".
+
 ## Author
+
 N3-Uchimura
 
 ## Licence
+
 [MIT](https://mit-license.org/)
