@@ -83,7 +83,7 @@ const createWindow = async (): Promise<void> => {
     // hide menubar
     mainWindow.setMenuBarVisibility(false);
     // load index.html
-    await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
+    await mainWindow.loadFile(path.join(globalRootPath, 'www', 'index.html'));
     // ready
     mainWindow.once('ready-to-show', async () => {
       // dev mode
@@ -260,8 +260,10 @@ ipcMain.on('sire', async (event: any, arg: any) => {
     const selectorArray: string[] = [mySelectors.TURF_SELECTOR, mySelectors.TURF_WIN_SELECTOR, mySelectors.DIRT_SELECTOR, mySelectors.DIRT_WIN_SELECTOR, mySelectors.TURF_DIST_SELECTOR, mySelectors.DIRT_DIST_SELECTOR];
     // language
     const language = cacheMaker.get('language') ?? '';
+    logger.silly(`${myConst.DEFAULT_URL}/horse/getstallion`);
     // stallion data
     const stallionData: any = await httpsPost(`${myConst.DEFAULT_URL}/horse/getstallion`, {});
+    logger.silly(stallionData);
     // extract first column
     const horses: string[] = stallionData.map((item: any) => item.horsename);
     // extract second column
@@ -385,7 +387,7 @@ ipcMain.on('config', async (_, arg: any) => {
   // language
   const language = cacheMaker.get('language') ?? '';
   // goto config page
-  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'config.html'));
+  await mainWindow.loadFile(path.join(globalRootPath, 'www', 'config.html'));
   // language
   mainWindow.send('confready', language);
 });
@@ -402,7 +404,7 @@ ipcMain.on('save', async (_, arg: any) => {
   // cache
   cacheMaker.set('language', language);
   // goto config page
-  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
+  await mainWindow.loadFile(path.join(globalRootPath, 'www', 'index.html'));
   // language
   mainWindow.send('topready', language);
 });
@@ -411,7 +413,7 @@ ipcMain.on('save', async (_, arg: any) => {
 ipcMain.on('top', async (_, arg: any) => {
   logger.info('app: top');
   // goto config page
-  await mainWindow.loadFile(path.join(__dirname, '..', 'www', 'index.html'));
+  await mainWindow.loadFile(path.join(globalRootPath, 'www', 'index.html'));
   // language
   const language = cacheMaker.get('language') ?? '';
   // language
