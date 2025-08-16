@@ -13,7 +13,7 @@ scrapeKeiba
 
 ## Overview
 
-This is scraping tool for netkeiba.com.  
+This is scraping tool for [netkeiba](https://www.netkeiba.com/)
 As a first release, collecting crop's results of stallion horse.
 
 ## Requirement
