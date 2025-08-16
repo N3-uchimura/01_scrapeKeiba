@@ -21,15 +21,7 @@ import ELLogger from './class/ElLogger'; // logger
 import { Scrape } from './class/ElScrapeCore0719'; // custom Scraper
 import Dialog from './class/ElDialog0721'; // dialog
 import CSV from './class/ElCsv0414'; // aggregator
-/// Variables
-let globalRootPath: string; // root path
-// production
-if (!myConst.DEVMODE) {
-  globalRootPath = path.join(path.resolve(), 'resources')
-  // development
-} else {
-  globalRootPath = path.join(__dirname, '..');
-}
+
 // desktop path
 const dir_home =
   process.env[process.platform == 'win32' ? 'USERPROFILE' : 'HOME'] ?? '';
@@ -63,6 +55,15 @@ interface windowOption {
 let mainWindow: any = null;
 // quit flg
 let isQuiting: boolean;
+/// Variables
+let globalRootPath: string; // root path
+// production
+if (!myConst.DEVMODE) {
+  globalRootPath = path.join(path.resolve(), 'resources')
+  // development
+} else {
+  globalRootPath = path.join(__dirname, '..');
+}
 
 // make window
 const createWindow = async (): Promise<void> => {
@@ -146,66 +147,76 @@ if (!gotTheLock) {
 
 // ready
 app.on('ready', async () => {
-  logger.info('app: electron is ready');
-  // make window
-  createWindow();
-  // menu label
-  let displayLabel: string = '';
-  // close label
-  let closeLabel: string = '';
-  // txt path
-  const languageTxtPath: string = path.join(__dirname, "..", "assets", "language.txt");
-  // not exists
-  if (!existsSync(languageTxtPath)) {
-    logger.debug('app: making txt ...');
-    // make txt file
-    await writeFile(languageTxtPath, 'japanese');
-  }
-  // get language
-  const language = await readFile(languageTxtPath, "utf8");
-  logger.debug(`language is ${language}`);
-  // switch on language
-  if (language == 'japanese') {
-    // set menu label
-    displayLabel = '表示';
-    // set close label
-    closeLabel = '閉じる';
-  } else {
-    // set menu label
-    displayLabel = 'show';
-    // set close label
-    closeLabel = 'close';
-  }
-  // cache
-  cacheMaker.set('language', language);
-  // app icon
-  const icon: Electron.NativeImage = nativeImage.createFromPath(
-    path.join(globalRootPath, 'assets/keiba128.ico')
-  );
-  // tray
-  const mainTray: Electron.Tray = new Tray(icon);
-  // contextMenu
-  const contextMenu: Electron.Menu = Menu.buildFromTemplate([
-    // show
-    {
-      label: displayLabel,
-      click: () => {
-        mainWindow.show();
+  try {
+    logger.info('app: electron is ready');
+    // make window
+    createWindow();
+    // menu label
+    let displayLabel: string = '';
+    // close label
+    let closeLabel: string = '';
+    // txt path
+    const languageTxtPath: string = path.join(globalRootPath, "assets", "language.txt");
+    // not exists
+    if (!existsSync(languageTxtPath)) {
+      logger.debug('app: making txt ...');
+      // make txt file
+      await writeFile(languageTxtPath, 'japanese');
+    }
+    // get language
+    const language = await readFile(languageTxtPath, "utf8");
+    logger.debug(`language is ${language}`);
+    // switch on language
+    if (language == 'japanese') {
+      // set menu label
+      displayLabel = '表示';
+      // set close label
+      closeLabel = '閉じる';
+    } else {
+      // set menu label
+      displayLabel = 'show';
+      // set close label
+      closeLabel = 'close';
+    }
+    // cache
+    cacheMaker.set('language', language);
+    // app icon
+    const icon: Electron.NativeImage = nativeImage.createFromPath(
+      path.join(globalRootPath, 'assets/keiba128.ico')
+    );
+    // tray
+    const mainTray: Electron.Tray = new Tray(icon);
+    // contextMenu
+    const contextMenu: Electron.Menu = Menu.buildFromTemplate([
+      // show
+      {
+        label: displayLabel,
+        click: () => {
+          mainWindow.show();
+        },
       },
-    },
-    // close
-    {
-      label: closeLabel,
-      click: () => {
-        isQuiting = true;
-        app.quit();
+      // close
+      {
+        label: closeLabel,
+        click: () => {
+          isQuiting = true;
+          app.quit();
+        },
       },
-    },
-  ]);
-  // set contextMenu
-  mainTray.setContextMenu(contextMenu);
-  // show on double click
-  mainTray.on('double-click', () => mainWindow.show());
+    ]);
+    // set contextMenu
+    mainTray.setContextMenu(contextMenu);
+    // show on double click
+    mainTray.on('double-click', () => mainWindow.show());
+
+  } catch (e: unknown) {
+    logger.error(e);
+    // error
+    if (e instanceof Error) {
+      // error message
+      dialogMaker.showmessage('error', e.message);
+    }
+  }
 });
 
 // activated

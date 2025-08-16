@@ -10,7 +10,7 @@ export namespace myConst {
   export const DEVMODE: boolean = true;
   export const COMPANY_NAME: string = "nthree";
   export const APP_NAME: string = "getKeiba";
-  export const LOG_LEVEL: string = "silly";
+  export const LOG_LEVEL: string = "info";
   export const DEFAULT_ENCODING: string = "utf8";
   export const CSV_ENCODING: string = "SJIS";
   export const DEFAULT_URL: string = "https://keiba.numthree.net/api";
